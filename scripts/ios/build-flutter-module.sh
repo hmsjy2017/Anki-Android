@@ -7,6 +7,7 @@ OUTPUT_DIR="$FLUTTER_DIR/build/ios/framework"
 FLUTTER_SDK_DIR="${IOS_FLUTTER_SDK_DIR:-$ROOT_DIR/build/ios/flutter-sdk}"
 AUTO_INSTALL_FLUTTER="${IOS_FLUTTER_AUTO_INSTALL:-true}"
 UNSIGNED_IPA="${IOS_UNSIGNED_IPA:-true}"
+BUILD_FLUTTER_FRAMEWORKS="${IOS_BUILD_FLUTTER_FRAMEWORKS:-}"
 
 if [[ ! -d "$FLUTTER_DIR" ]]; then
   echo "Flutter module directory '$FLUTTER_DIR' does not exist" >&2
@@ -54,6 +55,14 @@ ensure_flutter() {
 
 ensure_flutter
 
+if [[ -z "$BUILD_FLUTTER_FRAMEWORKS" ]]; then
+  if [[ "$UNSIGNED_IPA" == "true" ]]; then
+    BUILD_FLUTTER_FRAMEWORKS=false
+  else
+    BUILD_FLUTTER_FRAMEWORKS=true
+  fi
+fi
+
 flutter_build_args=(ios-framework --no-profile --output "$OUTPUT_DIR")
 if [[ "$UNSIGNED_IPA" == "true" ]]; then
   export CODE_SIGNING_ALLOWED=NO
@@ -73,7 +82,13 @@ fi
   rm -f test/widget_test.dart
   "$FLUTTER_BIN" pub get
   "$FLUTTER_BIN" test
-  "$FLUTTER_BIN" build "${flutter_build_args[@]}"
+  if [[ "$BUILD_FLUTTER_FRAMEWORKS" == "true" ]]; then
+    "$FLUTTER_BIN" build "${flutter_build_args[@]}"
+  else
+    echo "Skipping Flutter iOS framework build for unsigned IPA packaging. Set IOS_BUILD_FLUTTER_FRAMEWORKS=true to force it."
+  fi
 )
 
-echo "Built Flutter iOS frameworks in $OUTPUT_DIR"
+if [[ "$BUILD_FLUTTER_FRAMEWORKS" == "true" ]]; then
+  echo "Built Flutter iOS frameworks in $OUTPUT_DIR"
+fi
