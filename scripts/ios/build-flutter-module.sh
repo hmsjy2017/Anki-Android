@@ -54,8 +54,11 @@ ensure_flutter() {
 ensure_flutter
 
 "$FLUTTER_BIN" --version
-"$FLUTTER_BIN" pub get --directory "$FLUTTER_DIR"
-"$FLUTTER_BIN" test "$FLUTTER_DIR"
-"$FLUTTER_BIN" build ios-framework --no-profile --output "$OUTPUT_DIR" "$FLUTTER_DIR"
+(
+  cd "$FLUTTER_DIR"
+  "$FLUTTER_BIN" pub get
+  "$FLUTTER_BIN" test
+  "$FLUTTER_BIN" build ios-framework --no-profile --output "$OUTPUT_DIR"
+)
 
 echo "Built Flutter iOS frameworks in $OUTPUT_DIR"
