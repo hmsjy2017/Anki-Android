@@ -89,25 +89,29 @@ if [[ "$ALLOW_PROVISIONING_UPDATES" == "true" ]]; then
   xcode_args+=("-allowProvisioningUpdates")
 fi
 
+archive_args=(
+  archive
+  -scheme "$SCHEME"
+  -configuration "$CONFIGURATION"
+  -destination "$DESTINATION"
+  -archivePath "$ARCHIVE_PATH"
+)
+
 if [[ -n "$workspace" ]]; then
-  xcodebuild archive \
-    -workspace "$workspace" \
-    -scheme "$SCHEME" \
-    -configuration "$CONFIGURATION" \
-    -destination "$DESTINATION" \
-    -archivePath "$ARCHIVE_PATH" \
-    "${xcode_args[@]}" \
-    "${build_settings[@]}"
+  archive_args+=(-workspace "$workspace")
 else
-  xcodebuild archive \
-    -project "$project" \
-    -scheme "$SCHEME" \
-    -configuration "$CONFIGURATION" \
-    -destination "$DESTINATION" \
-    -archivePath "$ARCHIVE_PATH" \
-    "${xcode_args[@]}" \
-    "${build_settings[@]}"
+  archive_args+=(-project "$project")
 fi
+
+if ((${#xcode_args[@]})); then
+  archive_args+=("${xcode_args[@]}")
+fi
+
+if ((${#build_settings[@]})); then
+  archive_args+=("${build_settings[@]}")
+fi
+
+xcodebuild "${archive_args[@]}"
 
 if [[ "$UNSIGNED_IPA" == "true" ]]; then
   app=""
@@ -138,11 +142,18 @@ if [[ "$UNSIGNED_IPA" == "true" ]]; then
   rm -rf "$unsigned_root"
   echo "Unsigned IPA export complete: $EXPORT_PATH/$ipa_name"
 else
-  xcodebuild -exportArchive \
-    -archivePath "$ARCHIVE_PATH" \
-    -exportPath "$EXPORT_PATH" \
-    -exportOptionsPlist "$EXPORT_OPTIONS_PLIST" \
-    "${xcode_args[@]}"
+  export_args=(
+    -exportArchive
+    -archivePath "$ARCHIVE_PATH"
+    -exportPath "$EXPORT_PATH"
+    -exportOptionsPlist "$EXPORT_OPTIONS_PLIST"
+  )
+
+  if ((${#xcode_args[@]})); then
+    export_args+=("${xcode_args[@]}")
+  fi
+
+  xcodebuild "${export_args[@]}"
 
   echo "IPA export complete: $EXPORT_PATH"
 fi
