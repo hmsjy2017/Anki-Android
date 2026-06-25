@@ -5,6 +5,8 @@ IOS_DIR="${IOS_DIR:-ios}"
 SCHEME="${IOS_SCHEME:-AnkiDroid}"
 DESTINATION="${IOS_DESTINATION:-generic/platform=iOS Simulator}"
 SWIFT_PACKAGE_PATH="${IOS_SWIFT_PACKAGE_PATH:-}"
+BUILD_ANKI_BACKEND="${IOS_BUILD_ANKI_BACKEND:-true}"
+ANKI_BACKEND_XCFRAMEWORK="ios/AnkiBackendBridge/build/AnkiBackendFFI.xcframework"
 
 if [[ ! -d "$IOS_DIR" ]]; then
   echo "::notice title=iOS build skipped::No '$IOS_DIR' directory exists yet. Add the native iOS/iPadOS project under '$IOS_DIR' to enable builds."
@@ -44,6 +46,17 @@ fi
 if [[ -z "$workspace" && -z "$project" && -z "$package" ]]; then
   echo "::notice title=iOS build skipped::No Xcode workspace, Xcode project, or Swift package was found under '$IOS_DIR'."
   exit 0
+fi
+
+if [[ -n "$workspace" || -n "$project" ]]; then
+  if [[ "$BUILD_ANKI_BACKEND" == "true" ]]; then
+    scripts/ios/build-anki-backend-xcframework.sh
+  fi
+
+  if [[ ! -d "$ANKI_BACKEND_XCFRAMEWORK" ]]; then
+    echo "::error title=Anki backend missing::Expected '$ANKI_BACKEND_XCFRAMEWORK'. Run scripts/ios/build-anki-backend-xcframework.sh or set IOS_BUILD_ANKI_BACKEND=false only for package-only checks."
+    exit 1
+  fi
 fi
 
 if [[ -n "$workspace" ]]; then

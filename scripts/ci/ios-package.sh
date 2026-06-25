@@ -11,6 +11,8 @@ EXPORT_OPTIONS_PLIST="${IOS_EXPORT_OPTIONS_PLIST:-}"
 DESTINATION="${IOS_ARCHIVE_DESTINATION:-generic/platform=iOS}"
 ALLOW_PROVISIONING_UPDATES="${IOS_ALLOW_PROVISIONING_UPDATES:-false}"
 UNSIGNED_IPA="${IOS_UNSIGNED_IPA:-false}"
+BUILD_ANKI_BACKEND="${IOS_BUILD_ANKI_BACKEND:-true}"
+ANKI_BACKEND_XCFRAMEWORK="ios/AnkiBackendBridge/build/AnkiBackendFFI.xcframework"
 
 if [[ ! -d "$IOS_DIR" ]]; then
   echo "::error title=iOS packaging failed::No '$IOS_DIR' directory exists. Add the native iOS/iPadOS app target before packaging an IPA."
@@ -51,6 +53,15 @@ fi
 
 if ! command -v xcodebuild >/dev/null 2>&1; then
   echo "::error title=xcodebuild missing::Packaging an IPA requires macOS with Xcode command line tools."
+  exit 1
+fi
+
+if [[ "$BUILD_ANKI_BACKEND" == "true" ]]; then
+  scripts/ios/build-anki-backend-xcframework.sh
+fi
+
+if [[ ! -d "$ANKI_BACKEND_XCFRAMEWORK" ]]; then
+  echo "::error title=Anki backend missing::Expected '$ANKI_BACKEND_XCFRAMEWORK' before packaging. Run scripts/ios/build-anki-backend-xcframework.sh or set IOS_BUILD_ANKI_BACKEND=false only for temporary diagnostics."
   exit 1
 fi
 

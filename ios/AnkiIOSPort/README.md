@@ -33,7 +33,7 @@ The iOS port now includes a Rust FFI bridge crate at `ios/AnkiBackendBridge` tha
 scripts/ios/build-anki-backend-xcframework.sh
 ```
 
-The script cross-compiles the Rust bridge for iOS device and simulator targets and creates `ios/AnkiBackendBridge/build/AnkiBackendFFI.xcframework`. When that XCFramework exists, `ios/AnkiIOSPort/Package.swift` automatically adds it as the `AnkiBackendFFI` binary target so Swift code can call the C FFI wrapper. The first exposed calls report the upstream backend version and perform an official `CollectionBuilder` open/close probe against a collection path; higher-level deck, review, sync, import, and statistics calls should be layered on this same bridge instead of being reimplemented in Swift.
+The script cross-compiles the Rust bridge for iOS device and simulator targets and creates `ios/AnkiBackendBridge/build/AnkiBackendFFI.xcframework`. The CI iOS build and IPA packaging scripts run this backend build by default before invoking `xcodebuild`, and fail if the XCFramework is missing. When that XCFramework exists, `ios/AnkiIOSPort/Package.swift` automatically adds it as the `AnkiBackendFFI` binary target so Swift code can call the C FFI wrapper. The first exposed calls report the upstream backend version and perform an official `CollectionBuilder` open/close probe against a collection path; higher-level deck, review, sync, import, and statistics calls should be layered on this same bridge instead of being reimplemented in Swift.
 
 ## IPA packaging
 
