@@ -27,20 +27,18 @@ if [[ -z "$workspace" ]]; then
   done < <(find "$IOS_DIR" -maxdepth 2 -name '*.xcodeproj' -print0 | sort -z)
 fi
 
-if [[ -z "$workspace" && -z "$project" ]]; then
-  if [[ -n "$SWIFT_PACKAGE_PATH" ]]; then
-    if [[ -f "$SWIFT_PACKAGE_PATH/Package.swift" ]]; then
-      package="$SWIFT_PACKAGE_PATH"
-    else
-      echo "::error title=iOS Swift package missing::IOS_SWIFT_PACKAGE_PATH='$SWIFT_PACKAGE_PATH' does not contain Package.swift."
-      exit 1
-    fi
+if [[ -n "$SWIFT_PACKAGE_PATH" ]]; then
+  if [[ -f "$SWIFT_PACKAGE_PATH/Package.swift" ]]; then
+    package="$SWIFT_PACKAGE_PATH"
   else
-    while IFS= read -r -d '' candidate; do
-      package="$(dirname "$candidate")"
-      break
-    done < <(find "$IOS_DIR" -maxdepth 2 -name 'Package.swift' -print0 | sort -z)
+    echo "::error title=iOS Swift package missing::IOS_SWIFT_PACKAGE_PATH='$SWIFT_PACKAGE_PATH' does not contain Package.swift."
+    exit 1
   fi
+else
+  while IFS= read -r -d '' candidate; do
+    package="$(dirname "$candidate")"
+    break
+  done < <(find "$IOS_DIR" -maxdepth 2 -name 'Package.swift' -print0 | sort -z)
 fi
 
 if [[ -z "$workspace" && -z "$project" && -z "$package" ]]; then
@@ -50,10 +48,12 @@ fi
 
 if [[ -n "$workspace" ]]; then
   xcodebuild -resolvePackageDependencies -workspace "$workspace" -scheme "$SCHEME"
-  xcodebuild build test -workspace "$workspace" -scheme "$SCHEME" -destination "$DESTINATION"
+  xcodebuild build -workspace "$workspace" -scheme "$SCHEME" -destination "$DESTINATION"
 elif [[ -n "$project" ]]; then
   xcodebuild -resolvePackageDependencies -project "$project" -scheme "$SCHEME"
-  xcodebuild build test -project "$project" -scheme "$SCHEME" -destination "$DESTINATION"
-else
+  xcodebuild build -project "$project" -scheme "$SCHEME" -destination "$DESTINATION"
+fi
+
+if [[ -n "$package" ]]; then
   swift test --package-path "$package"
 fi
