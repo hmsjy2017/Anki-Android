@@ -10,7 +10,11 @@ EXPORT_METHOD="${IOS_EXPORT_METHOD:-development}"
 EXPORT_OPTIONS_PLIST="${IOS_EXPORT_OPTIONS_PLIST:-}"
 DESTINATION="${IOS_ARCHIVE_DESTINATION:-generic/platform=iOS}"
 ALLOW_PROVISIONING_UPDATES="${IOS_ALLOW_PROVISIONING_UPDATES:-false}"
-UNSIGNED_IPA="${IOS_UNSIGNED_IPA:-false}"
+UNSIGNED_IPA="${IOS_UNSIGNED_IPA:-true}"
+BUILD_ANKI_BACKEND="${IOS_BUILD_ANKI_BACKEND:-true}"
+BUILD_FLUTTER="${IOS_BUILD_FLUTTER:-true}"
+PACKAGE_FLUTTER_APP="${IOS_PACKAGE_FLUTTER_APP:-true}"
+ANKI_BACKEND_XCFRAMEWORK="ios/AnkiBackendBridge/build/AnkiBackendFFI.xcframework"
 
 if [[ ! -d "$IOS_DIR" ]]; then
   echo "::error title=iOS packaging failed::No '$IOS_DIR' directory exists. Add the native iOS/iPadOS app target before packaging an IPA."
@@ -54,7 +58,44 @@ if ! command -v xcodebuild >/dev/null 2>&1; then
   exit 1
 fi
 
+if [[ "$BUILD_FLUTTER" == "true" && -d "ios/FlutterAnkiDroid" ]]; then
+  scripts/ios/build-flutter-module.sh
+fi
+
+if [[ "$BUILD_ANKI_BACKEND" == "true" ]]; then
+  scripts/ios/build-anki-backend-xcframework.sh
+fi
+
+if [[ ! -d "$ANKI_BACKEND_XCFRAMEWORK" ]]; then
+  echo "::error title=Anki backend missing::Expected '$ANKI_BACKEND_XCFRAMEWORK' before packaging. Run scripts/ios/build-anki-backend-xcframework.sh or set IOS_BUILD_ANKI_BACKEND=false only for temporary diagnostics."
+  exit 1
+fi
+
 mkdir -p "$(dirname "$ARCHIVE_PATH")" "$EXPORT_PATH"
+
+if [[ "$UNSIGNED_IPA" == "true" && "$PACKAGE_FLUTTER_APP" == "true" && -d "ios/FlutterAnkiDroid" ]]; then
+  flutter_app="ios/FlutterAnkiDroid/build/ios/iphoneos/Runner.app"
+  if [[ ! -d "$flutter_app" ]]; then
+    echo "::error title=Flutter app missing::Expected '$flutter_app'. scripts/ios/build-flutter-module.sh must produce the unsigned Flutter app before packaging."
+    exit 1
+  fi
+  if ! command -v zip >/dev/null 2>&1; then
+    echo "::error title=zip missing::Packaging an unsigned IPA requires the zip command."
+    exit 1
+  fi
+  unsigned_root="$(mktemp -d -t anki-ios-flutter-unsigned-ipa.XXXXXX)"
+  ipa_name="${IOS_IPA_NAME:-${SCHEME}-Flutter-unsigned.ipa}"
+  export_path_absolute="$(cd "$EXPORT_PATH" && pwd)"
+  mkdir -p "$unsigned_root/Payload"
+  cp -R "$flutter_app" "$unsigned_root/Payload/"
+  (
+    cd "$unsigned_root"
+    zip -qry "$export_path_absolute/$ipa_name" Payload
+  )
+  rm -rf "$unsigned_root"
+  echo "Unsigned Flutter IPA export complete: $EXPORT_PATH/$ipa_name"
+  exit 0
+fi
 
 build_settings=()
 if [[ "$UNSIGNED_IPA" == "true" ]]; then

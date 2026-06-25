@@ -24,6 +24,17 @@ official Anki Rust backend instead of reimplementing scheduler logic in Swift.
    the Rust backend.
 4. Expand coverage for collection loading, media paths, sync, and import/export.
 
+
+## Official Anki Rust backend bridge
+
+The iOS port now includes a Rust FFI bridge crate at `ios/AnkiBackendBridge` that depends directly on the official `ankitects/anki` Rust crate (`rslib`) at tag `26.05`. Build it on macOS with (the script uses `PROTOC` or `protoc` from `PATH`, and downloads a pinned official protobuf `protoc` binary if neither is available):
+
+```bash
+scripts/ios/build-anki-backend-xcframework.sh
+```
+
+The script cross-compiles the Rust bridge for iOS device and simulator targets and creates `ios/AnkiBackendBridge/build/AnkiBackendFFI.xcframework`. The CI iOS build and IPA packaging scripts run this backend build by default before invoking `xcodebuild`, and fail if the XCFramework is missing. When that XCFramework exists, `ios/AnkiIOSPort/Package.swift` automatically adds it as the `AnkiBackendFFI` binary target so Swift code can call the C FFI wrapper. The first exposed calls report the upstream backend version and perform an official `CollectionBuilder` open/close probe against a collection path; higher-level deck, review, sync, import, and statistics calls should be layered on this same bridge instead of being reimplemented in Swift.
+
 ## IPA packaging
 
 The repository now includes a minimal SwiftUI app target and shared Xcode scheme at
