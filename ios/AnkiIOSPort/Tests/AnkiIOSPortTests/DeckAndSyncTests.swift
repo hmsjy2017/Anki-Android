@@ -2,47 +2,54 @@ import Foundation
 import Testing
 @testable import AnkiIOSPort
 
-@Test func deckLibraryAddsAndSortsDecks() async throws {
-    let library = DeckLibrary(decks: [
-        DeckSummary(id: 10, name: "Zoology", newCount: 1, learningCount: 0, reviewCount: 0)
-    ])
-
-    let created = try await library.addDeck(named: "  Algebra  ")
-    #expect(created.name == "Algebra")
-    #expect(created.dueCount == 0)
-
-    let decks = await library.listDecks()
-    #expect(decks.map(\.name) == ["Algebra", "Zoology"])
-}
-
-@Test func deckLibraryRejectsInvalidDeckNames() async throws {
-    let library = DeckLibrary(decks: [
-        DeckSummary(id: 1, name: "Default", newCount: 0, learningCount: 0, reviewCount: 0)
-    ])
-
-    await #expect(throws: DeckLibraryError.emptyName) {
-        try await library.addDeck(named: "   ")
-    }
-
-    await #expect(throws: DeckLibraryError.duplicateName("default")) {
-        try await library.addDeck(named: "default")
+@Test func deckNameTrimsAndRejectsEmptyNames() throws {
+    #expect(try DeckName("  Japanese  ").rawValue == "Japanese")
+    #expect(throws: AnkiBackendOperationError.emptyDeckName) {
+        try DeckName("   ")
     }
 }
 
-@Test func syncCoordinatorRequiresSignInThenClearsPendingChanges() async throws {
-    let coordinator = SyncCoordinator(state: SyncState(pendingChanges: 4))
+@Test func ankiWebCredentialsRequireUsernameAndPassword() throws {
+    let credentials = try AnkiWebCredentials(username: " user@example.com ", password: "secret")
+    #expect(credentials.username == "user@example.com")
+    #expect(credentials.password == "secret")
 
-    #expect(await coordinator.currentState().pendingChanges == 4)
-    await #expect(throws: SyncError.notSignedIn) {
-        try await coordinator.sync(now: Date(timeIntervalSince1970: 100))
+    #expect(throws: AnkiBackendOperationError.emptyUsername) {
+        try AnkiWebCredentials(username: " ", password: "secret")
+    }
+    #expect(throws: AnkiBackendOperationError.emptyPassword) {
+        try AnkiWebCredentials(username: "user@example.com", password: "")
+    }
+}
+
+@Test func importPackageKindMatchesAnkiPackageExtensions() throws {
+    #expect(try ImportPackageKind.kind(for: URL(fileURLWithPath: "/tmp/deck.apkg")) == .deckPackage)
+    #expect(try ImportPackageKind.kind(for: URL(fileURLWithPath: "/tmp/collection.colpkg")) == .collectionPackage)
+    #expect(throws: AnkiBackendOperationError.unsupportedPackageExtension("zip")) {
+        try ImportPackageKind.kind(for: URL(fileURLWithPath: "/tmp/archive.zip"))
+    }
+}
+
+@Test func unavailableBackendDoesNotFakeCollectionOrSyncOperations() async throws {
+    let backend = OfficialAnkiBackendUnavailable()
+
+    await #expect(throws: AnkiBackendOperationError.officialBackendNotLinked) {
+        try await backend.listDecks()
+    }
+    await #expect(throws: AnkiBackendOperationError.officialBackendNotLinked) {
+        try await backend.createDeck(named: "Default")
+    }
+    await #expect(throws: AnkiBackendOperationError.officialBackendNotLinked) {
+        try await backend.importPackage(at: URL(fileURLWithPath: "/tmp/deck.apkg"))
+    }
+    await #expect(throws: AnkiBackendOperationError.officialBackendNotLinked) {
+        let credentials = try AnkiWebCredentials(username: "user@example.com", password: "secret")
+        _ = try await backend.login(credentials: credentials)
+    }
+    await #expect(throws: AnkiBackendOperationError.officialBackendNotLinked) {
+        try await backend.sync()
     }
 
-    let signedIn = try await coordinator.signIn(accountName: " user@example.com ")
-    #expect(signedIn.isSignedIn)
-    #expect(signedIn.accountName == "user@example.com")
-
-    let synced = try await coordinator.sync(now: Date(timeIntervalSince1970: 100))
-    #expect(synced.pendingChanges == 0)
-    #expect(synced.lastSyncDate == Date(timeIntervalSince1970: 100))
-    #expect(synced.statusMessage == "Sync complete")
+    let syncState = try await backend.currentSyncState()
+    #expect(syncState.statusMessage == AnkiBackendOperationError.officialBackendNotLinked.localizedDescription)
 }

@@ -19,14 +19,12 @@ public struct DeckSummary: Identifiable, Equatable, Sendable {
 }
 
 public struct SyncState: Equatable, Sendable {
-    public var isSignedIn: Bool
     public var accountName: String?
     public var lastSyncDate: Date?
     public var pendingChanges: Int
     public var statusMessage: String
 
-    public init(isSignedIn: Bool = false, accountName: String? = nil, lastSyncDate: Date? = nil, pendingChanges: Int = 0, statusMessage: String = "Not synced yet") {
-        self.isSignedIn = isSignedIn
+    public init(accountName: String? = nil, lastSyncDate: Date? = nil, pendingChanges: Int = 0, statusMessage: String = "Official Anki backend is not linked") {
         self.accountName = accountName
         self.lastSyncDate = lastSyncDate
         self.pendingChanges = pendingChanges
@@ -34,83 +32,135 @@ public struct SyncState: Equatable, Sendable {
     }
 }
 
-public actor DeckLibrary {
-    private var decks: [DeckSummary]
+public struct AnkiWebCredentials: Equatable, Sendable {
+    public let username: String
+    public let password: String
 
-    public init(decks: [DeckSummary] = DeckLibrary.sampleDecks) {
-        self.decks = decks
+    public init(username: String, password: String) throws {
+        let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedUsername.isEmpty else { throw AnkiBackendOperationError.emptyUsername }
+        guard !password.isEmpty else { throw AnkiBackendOperationError.emptyPassword }
+        self.username = trimmedUsername
+        self.password = password
+    }
+}
+
+public enum ImportPackageKind: Equatable, Sendable {
+    case deckPackage
+    case collectionPackage
+
+    public static func kind(for url: URL) throws -> ImportPackageKind {
+        switch url.pathExtension.lowercased() {
+        case "apkg": .deckPackage
+        case "colpkg": .collectionPackage
+        default: throw AnkiBackendOperationError.unsupportedPackageExtension(url.pathExtension)
+        }
+    }
+}
+
+public struct ImportResult: Equatable, Sendable {
+    public let packageKind: ImportPackageKind
+    public let message: String
+
+    public init(packageKind: ImportPackageKind, message: String) {
+        self.packageKind = packageKind
+        self.message = message
+    }
+}
+
+public struct StudyStatistics: Equatable, Sendable {
+    public var studiedToday: Int
+    public var reviewAccuracy: Double
+    public var studiedSeconds: Int
+
+    public init(studiedToday: Int, reviewAccuracy: Double, studiedSeconds: Int) {
+        self.studiedToday = studiedToday
+        self.reviewAccuracy = reviewAccuracy
+        self.studiedSeconds = studiedSeconds
+    }
+}
+
+public protocol AnkiCollectionBackend: Sendable {
+    func listDecks() async throws -> [DeckSummary]
+    func createDeck(named name: String) async throws -> DeckSummary
+    func importPackage(at url: URL) async throws -> ImportResult
+    func statistics() async throws -> StudyStatistics
+}
+
+public protocol AnkiSyncBackend: Sendable {
+    func currentSyncState() async throws -> SyncState
+    func login(credentials: AnkiWebCredentials) async throws -> SyncState
+    func sync() async throws -> SyncState
+}
+
+/// Explicit placeholder used until the official Anki Rust backend is packaged for Apple platforms.
+///
+/// This type intentionally does not fake AnkiWeb login, syncing, importing, scheduling, or statistics.
+/// Production iOS/iPadOS builds must replace it with an implementation backed by the official
+/// Anki Rust backend FFI/XCFramework so behavior matches Anki Desktop and AnkiDroid.
+public actor OfficialAnkiBackendUnavailable: AnkiCollectionBackend, AnkiSyncBackend {
+    public init() {}
+
+    public func listDecks() async throws -> [DeckSummary] {
+        throw AnkiBackendOperationError.officialBackendNotLinked
     }
 
-    public func listDecks() -> [DeckSummary] {
-        decks.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    public func createDeck(named name: String) async throws -> DeckSummary {
+        _ = try DeckName(name)
+        throw AnkiBackendOperationError.officialBackendNotLinked
     }
 
-    public func addDeck(named name: String) throws -> DeckSummary {
+    public func importPackage(at url: URL) async throws -> ImportResult {
+        _ = try ImportPackageKind.kind(for: url)
+        throw AnkiBackendOperationError.officialBackendNotLinked
+    }
+
+    public func statistics() async throws -> StudyStatistics {
+        throw AnkiBackendOperationError.officialBackendNotLinked
+    }
+
+    public func currentSyncState() async throws -> SyncState {
+        SyncState(statusMessage: AnkiBackendOperationError.officialBackendNotLinked.localizedDescription)
+    }
+
+    public func login(credentials: AnkiWebCredentials) async throws -> SyncState {
+        throw AnkiBackendOperationError.officialBackendNotLinked
+    }
+
+    public func sync() async throws -> SyncState {
+        throw AnkiBackendOperationError.officialBackendNotLinked
+    }
+}
+
+public struct DeckName: Equatable, Sendable {
+    public let rawValue: String
+
+    public init(_ name: String) throws {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { throw DeckLibraryError.emptyName }
-        guard !decks.contains(where: { $0.name.caseInsensitiveCompare(trimmed) == .orderedSame }) else {
-            throw DeckLibraryError.duplicateName(trimmed)
-        }
-        let nextID = (decks.map(\.id).max() ?? 0) + 1
-        let deck = DeckSummary(id: nextID, name: trimmed, newCount: 0, learningCount: 0, reviewCount: 0)
-        decks.append(deck)
-        return deck
+        guard !trimmed.isEmpty else { throw AnkiBackendOperationError.emptyDeckName }
+        self.rawValue = trimmed
     }
-
-    public static let sampleDecks = [
-        DeckSummary(id: 1, name: "Default", newCount: 12, learningCount: 3, reviewCount: 25),
-        DeckSummary(id: 2, name: "Japanese", newCount: 8, learningCount: 2, reviewCount: 14),
-        DeckSummary(id: 3, name: "Biology", newCount: 5, learningCount: 0, reviewCount: 9)
-    ]
 }
 
-public enum DeckLibraryError: Error, Equatable, LocalizedError {
-    case emptyName
-    case duplicateName(String)
+public enum AnkiBackendOperationError: Error, Equatable, LocalizedError {
+    case emptyDeckName
+    case emptyUsername
+    case emptyPassword
+    case unsupportedPackageExtension(String)
+    case officialBackendNotLinked
 
     public var errorDescription: String? {
         switch self {
-        case .emptyName: "Deck name cannot be empty."
-        case let .duplicateName(name): "A deck named ‘\(name)’ already exists."
-        }
-    }
-}
-
-public actor SyncCoordinator {
-    private var state: SyncState
-
-    public init(state: SyncState = SyncState(pendingChanges: 3)) {
-        self.state = state
-    }
-
-    public func currentState() -> SyncState { state }
-
-    public func signIn(accountName: String) throws -> SyncState {
-        let trimmed = accountName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { throw SyncError.emptyAccountName }
-        state.isSignedIn = true
-        state.accountName = trimmed
-        state.statusMessage = "Signed in as \(trimmed)"
-        return state
-    }
-
-    public func sync(now: Date = Date()) throws -> SyncState {
-        guard state.isSignedIn else { throw SyncError.notSignedIn }
-        state.lastSyncDate = now
-        state.pendingChanges = 0
-        state.statusMessage = "Sync complete"
-        return state
-    }
-}
-
-public enum SyncError: Error, Equatable, LocalizedError {
-    case emptyAccountName
-    case notSignedIn
-
-    public var errorDescription: String? {
-        switch self {
-        case .emptyAccountName: "Enter an AnkiWeb account name."
-        case .notSignedIn: "Sign in before syncing."
+        case .emptyDeckName:
+            "Deck name cannot be empty."
+        case .emptyUsername:
+            "Enter your AnkiWeb username."
+        case .emptyPassword:
+            "Enter your AnkiWeb password."
+        case let .unsupportedPackageExtension(ext):
+            "Only .apkg deck packages and .colpkg collection packages are supported, not .\(ext)."
+        case .officialBackendNotLinked:
+            "The official Anki Rust backend is not linked in this build yet."
         }
     }
 }
