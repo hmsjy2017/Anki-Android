@@ -56,6 +56,9 @@ ensure_flutter
 "$FLUTTER_BIN" --version
 (
   cd "$FLUTTER_DIR"
+  if [[ ! -d ios ]]; then
+    "$FLUTTER_BIN" create --platforms=ios --project-name flutter_ankidroid .
+  fi
   "$FLUTTER_BIN" pub get
   "$FLUTTER_BIN" test
   "$FLUTTER_BIN" build ios-framework --no-profile --output "$OUTPUT_DIR"
