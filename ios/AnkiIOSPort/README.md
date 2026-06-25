@@ -27,7 +27,7 @@ official Anki Rust backend instead of reimplementing scheduler logic in Swift.
 
 ## Official Anki Rust backend bridge
 
-The iOS port now includes a Rust FFI bridge crate at `ios/AnkiBackendBridge` that depends directly on the official `ankitects/anki` Rust crate (`rslib`) at tag `26.05`. Build it on macOS with:
+The iOS port now includes a Rust FFI bridge crate at `ios/AnkiBackendBridge` that depends directly on the official `ankitects/anki` Rust crate (`rslib`) at tag `26.05`. Build it on macOS with (the script uses `PROTOC` or `protoc` from `PATH`, and downloads a pinned official protobuf `protoc` binary if neither is available):
 
 ```bash
 scripts/ios/build-anki-backend-xcframework.sh
