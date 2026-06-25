@@ -6,6 +6,7 @@ SCHEME="${IOS_SCHEME:-AnkiDroid}"
 DESTINATION="${IOS_DESTINATION:-generic/platform=iOS Simulator}"
 SWIFT_PACKAGE_PATH="${IOS_SWIFT_PACKAGE_PATH:-}"
 BUILD_ANKI_BACKEND="${IOS_BUILD_ANKI_BACKEND:-true}"
+BUILD_FLUTTER="${IOS_BUILD_FLUTTER:-true}"
 ANKI_BACKEND_XCFRAMEWORK="ios/AnkiBackendBridge/build/AnkiBackendFFI.xcframework"
 
 if [[ ! -d "$IOS_DIR" ]]; then
@@ -49,6 +50,10 @@ if [[ -z "$workspace" && -z "$project" && -z "$package" ]]; then
 fi
 
 if [[ -n "$workspace" || -n "$project" ]]; then
+  if [[ "$BUILD_FLUTTER" == "true" && -d "ios/FlutterAnkiDroid" ]]; then
+    scripts/ios/build-flutter-module.sh
+  fi
+
   if [[ "$BUILD_ANKI_BACKEND" == "true" ]]; then
     scripts/ios/build-anki-backend-xcframework.sh
   fi

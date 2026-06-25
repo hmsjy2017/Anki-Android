@@ -147,6 +147,8 @@ public enum AnkiBackendOperationError: Error, Equatable, LocalizedError {
     case emptyUsername
     case emptyPassword
     case unsupportedPackageExtension(String)
+    case duplicateDeckName(String)
+    case notLoggedIn
     case officialBackendNotLinked
 
     public var errorDescription: String? {
@@ -159,6 +161,10 @@ public enum AnkiBackendOperationError: Error, Equatable, LocalizedError {
             "Enter your AnkiWeb password."
         case let .unsupportedPackageExtension(ext):
             "Only .apkg deck packages and .colpkg collection packages are supported, not .\(ext)."
+        case let .duplicateDeckName(name):
+            "A deck named ‘\(name)’ already exists."
+        case .notLoggedIn:
+            "Log in to AnkiWeb before syncing."
         case .officialBackendNotLinked:
             "The official Anki Rust backend is not linked in this build yet."
         }

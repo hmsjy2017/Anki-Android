@@ -16,8 +16,8 @@ final class HomeViewModel: ObservableObject {
     private let syncBackend: any AnkiSyncBackend
 
     init(
-        collectionBackend: any AnkiCollectionBackend = OfficialAnkiBackendUnavailable(),
-        syncBackend: any AnkiSyncBackend = OfficialAnkiBackendUnavailable()
+        collectionBackend: any AnkiCollectionBackend = DefaultAnkiBackends.collectionBackend(),
+        syncBackend: any AnkiSyncBackend = DefaultAnkiBackends.syncBackend()
     ) {
         self.collectionBackend = collectionBackend
         self.syncBackend = syncBackend

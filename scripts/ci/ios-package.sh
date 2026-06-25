@@ -12,6 +12,7 @@ DESTINATION="${IOS_ARCHIVE_DESTINATION:-generic/platform=iOS}"
 ALLOW_PROVISIONING_UPDATES="${IOS_ALLOW_PROVISIONING_UPDATES:-false}"
 UNSIGNED_IPA="${IOS_UNSIGNED_IPA:-false}"
 BUILD_ANKI_BACKEND="${IOS_BUILD_ANKI_BACKEND:-true}"
+BUILD_FLUTTER="${IOS_BUILD_FLUTTER:-true}"
 ANKI_BACKEND_XCFRAMEWORK="ios/AnkiBackendBridge/build/AnkiBackendFFI.xcframework"
 
 if [[ ! -d "$IOS_DIR" ]]; then
@@ -54,6 +55,10 @@ fi
 if ! command -v xcodebuild >/dev/null 2>&1; then
   echo "::error title=xcodebuild missing::Packaging an IPA requires macOS with Xcode command line tools."
   exit 1
+fi
+
+if [[ "$BUILD_FLUTTER" == "true" && -d "ios/FlutterAnkiDroid" ]]; then
+  scripts/ios/build-flutter-module.sh
 fi
 
 if [[ "$BUILD_ANKI_BACKEND" == "true" ]]; then
