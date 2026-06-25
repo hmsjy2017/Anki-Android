@@ -18,6 +18,7 @@ Alternately, you may run the actions on your fork of `Anki-Android`.
 | [Unit Tests](https://github.com/ankidroid/Anki-Android/blob/main/.github/workflows/tests_unit.yml)         | `./gradlew jacocoUnitTestReport --daemon`                            | Unit tests for the Android Project                        |
 | [Emulator Tests](https://github.com/ankidroid/Anki-Android/blob/main/.github/workflows/tests_emulator.yml) | `TEST_RELEASE_BUILD=true ./gradlew jacocoAndroidTestReport --daemon` | Emulator tests for the Android Project                    |
 | [CodeQL](https://github.com/ankidroid/Anki-Android/blob/main/.github/workflows/codeql.yml)                 | N/A                                                                  | GitHub-only check.<br/>[Docs](https://codeql.github.com/) |
+| [iOS / iPadOS](https://github.com/ankidroid/Anki-Android/blob/main/.github/workflows/ios.yml) | `scripts/ci/ios-build.sh` | Builds and tests the native Apple target once an `ios/` Xcode project or workspace exists |
 
 ## Other Workflows
 
