@@ -63,7 +63,8 @@ if [[ -z "$BUILD_FLUTTER_FRAMEWORKS" ]]; then
   fi
 fi
 
-flutter_build_args=(ios-framework --no-profile --output "$OUTPUT_DIR")
+flutter_framework_args=(ios-framework --no-profile --output "$OUTPUT_DIR")
+flutter_app_args=(ios --release --no-codesign)
 if [[ "$UNSIGNED_IPA" == "true" ]]; then
   export CODE_SIGNING_ALLOWED=NO
   export CODE_SIGNING_REQUIRED=NO
@@ -72,7 +73,7 @@ fi
 
 "$FLUTTER_BIN" --version
 if [[ "$UNSIGNED_IPA" == "true" ]] && "$FLUTTER_BIN" build ios-framework --help | grep -q -- "--no-codesign"; then
-  flutter_build_args+=(--no-codesign)
+  flutter_framework_args+=(--no-codesign)
 fi
 (
   cd "$FLUTTER_DIR"
@@ -82,13 +83,17 @@ fi
   rm -f test/widget_test.dart
   "$FLUTTER_BIN" pub get
   "$FLUTTER_BIN" test
-  if [[ "$BUILD_FLUTTER_FRAMEWORKS" == "true" ]]; then
-    "$FLUTTER_BIN" build "${flutter_build_args[@]}"
+  if [[ "$UNSIGNED_IPA" == "true" ]]; then
+    "$FLUTTER_BIN" build "${flutter_app_args[@]}"
+  elif [[ "$BUILD_FLUTTER_FRAMEWORKS" == "true" ]]; then
+    "$FLUTTER_BIN" build "${flutter_framework_args[@]}"
   else
-    echo "Skipping Flutter iOS framework build for unsigned IPA packaging. Set IOS_BUILD_FLUTTER_FRAMEWORKS=true to force it."
+    echo "Skipping Flutter iOS framework build. Set IOS_BUILD_FLUTTER_FRAMEWORKS=true to force it."
   fi
 )
 
-if [[ "$BUILD_FLUTTER_FRAMEWORKS" == "true" ]]; then
+if [[ "$UNSIGNED_IPA" == "true" ]]; then
+  echo "Built unsigned Flutter iOS app at $FLUTTER_DIR/build/ios/iphoneos/Runner.app"
+elif [[ "$BUILD_FLUTTER_FRAMEWORKS" == "true" ]]; then
   echo "Built Flutter iOS frameworks in $OUTPUT_DIR"
 fi
