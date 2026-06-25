@@ -3,7 +3,7 @@ set -euo pipefail
 
 IOS_DIR="${IOS_DIR:-ios}"
 SCHEME="${IOS_SCHEME:-AnkiDroid}"
-DESTINATION="${IOS_DESTINATION:-platform=iOS Simulator,name=iPad (10th generation)}"
+DESTINATION="${IOS_DESTINATION:-generic/platform=iOS Simulator}"
 SWIFT_PACKAGE_PATH="${IOS_SWIFT_PACKAGE_PATH:-}"
 
 if [[ ! -d "$IOS_DIR" ]]; then
