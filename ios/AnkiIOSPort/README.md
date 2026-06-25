@@ -26,12 +26,13 @@ official Anki Rust backend instead of reimplementing scheduler logic in Swift.
 
 ## IPA packaging
 
-The Swift package in this directory is a library boundary, so it can compile and
-test by itself but cannot produce an installable IPA without an iOS app target.
-Once an Xcode `.xcodeproj` or `.xcworkspace` app target is added under `ios/`, run
-`IOS_SCHEME=<AppScheme> scripts/ci/ios-package.sh` on macOS with Xcode and valid
-signing credentials to archive and export the IPA into `build/ios/ipa`. To create
-an unsigned IPA for internal inspection, run
-`IOS_UNSIGNED_IPA=true IOS_SCHEME=<AppScheme> scripts/ci/ios-package.sh`; this
-disables code signing during archive and zips the archived `.app` as
-`Payload/<App>.app`.
+The repository now includes a minimal SwiftUI app target and shared Xcode scheme at
+`ios/AnkiDroid` that depend on this Swift package. CI builds the app and packages an unsigned IPA on
+every iOS workflow run, including pull requests and pushes to `main`, so manual
+workflow dispatch is not required for routine packaging checks.
+
+Run `IOS_UNSIGNED_IPA=true scripts/ci/ios-package.sh` on macOS with Xcode to
+archive the app and zip the unsigned `Payload/AnkiDroid.app` into
+`build/ios/ipa/AnkiDroid-unsigned.ipa`. For signed distribution, provide signing
+credentials and export options, then run `scripts/ci/ios-package.sh` without
+`IOS_UNSIGNED_IPA=true`.
