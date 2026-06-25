@@ -6,7 +6,7 @@ struct ContentView: View {
         VStack(spacing: 16) {
             Image(systemName: "rectangle.stack.badge.play")
                 .font(.system(size: 48))
-                .foregroundStyle(.accent)
+                .foregroundStyle(Color.accentColor)
             Text("AnkiDroid")
                 .font(.largeTitle.bold())
             Text("iOS/iPadOS port scaffold")
