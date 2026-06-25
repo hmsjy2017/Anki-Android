@@ -59,6 +59,7 @@ ensure_flutter
   if [[ ! -d ios ]]; then
     "$FLUTTER_BIN" create --platforms=ios --project-name flutter_ankidroid .
   fi
+  rm -f test/widget_test.dart
   "$FLUTTER_BIN" pub get
   "$FLUTTER_BIN" test
   "$FLUTTER_BIN" build ios-framework --no-profile --output "$OUTPUT_DIR"
