@@ -6,6 +6,7 @@ FLUTTER_DIR="$ROOT_DIR/ios/FlutterAnkiDroid"
 OUTPUT_DIR="$FLUTTER_DIR/build/ios/framework"
 FLUTTER_SDK_DIR="${IOS_FLUTTER_SDK_DIR:-$ROOT_DIR/build/ios/flutter-sdk}"
 AUTO_INSTALL_FLUTTER="${IOS_FLUTTER_AUTO_INSTALL:-true}"
+UNSIGNED_IPA="${IOS_UNSIGNED_IPA:-true}"
 
 if [[ ! -d "$FLUTTER_DIR" ]]; then
   echo "Flutter module directory '$FLUTTER_DIR' does not exist" >&2
@@ -53,7 +54,17 @@ ensure_flutter() {
 
 ensure_flutter
 
+flutter_build_args=(ios-framework --no-profile --output "$OUTPUT_DIR")
+if [[ "$UNSIGNED_IPA" == "true" ]]; then
+  export CODE_SIGNING_ALLOWED=NO
+  export CODE_SIGNING_REQUIRED=NO
+  export CODE_SIGN_IDENTITY=""
+fi
+
 "$FLUTTER_BIN" --version
+if [[ "$UNSIGNED_IPA" == "true" ]] && "$FLUTTER_BIN" build ios-framework --help | grep -q -- "--no-codesign"; then
+  flutter_build_args+=(--no-codesign)
+fi
 (
   cd "$FLUTTER_DIR"
   if [[ ! -d ios ]]; then
@@ -62,7 +73,7 @@ ensure_flutter
   rm -f test/widget_test.dart
   "$FLUTTER_BIN" pub get
   "$FLUTTER_BIN" test
-  "$FLUTTER_BIN" build ios-framework --no-profile --output "$OUTPUT_DIR"
+  "$FLUTTER_BIN" build "${flutter_build_args[@]}"
 )
 
 echo "Built Flutter iOS frameworks in $OUTPUT_DIR"
